@@ -1,60 +1,242 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NghiaMapVlogs</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
+    :root{
+      --bg: rgba(0,0,0,0.7);
+      --text: #fff;
+      --accent: #00bfff;
+      --muted: #88a;
+    }
+    *{box-sizing:border-box}
     body {
       margin: 0;
-      height: 100vh;
+      min-height: 100vh;
       background: url('background.gif') no-repeat center/cover;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-family: sans-serif;
-      color: white;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      padding: 16px;
     }
     .card {
-      background: rgba(0,0,0,0.7);
+      background: var(--bg);
       border-radius: 20px;
       padding: 20px;
       text-align: center;
-      width: 300px;
+      width: min(380px, 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
     }
-    .card img {
+    .card img.avatar {
       border-radius: 50%;
-      width: 100px;
-      height: 100px;
+      width: 110px; height: 110px;
+      object-fit: cover;
+      border: 3px solid rgba(255,255,255,.2);
     }
+    h2{margin: 12px 0 6px}
     .icons a {
-      margin: 10px;
-      font-size: 28px;
-      color: white;
+      margin: 0 10px;
+      font-size: 26px;
+      color: var(--text);
       text-decoration: none;
+      transition: transform .2s, color .2s;
     }
-    .icons a:hover {
-      color: #00bfff; /* màu khi hover */
+    .icons a:hover { color: var(--accent); transform: translateY(-2px); }
+    .views { opacity:.85; margin: 8px 0 14px; font-size: 14px; }
+
+    /* Player */
+    .player {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
     }
-    audio {
-      width: 100%;
-      margin-top: 15px;
+    .nowplaying { font-size: 14px; color: #e9f6ff; opacity:.9 }
+
+    .controls {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+    }
+    .btn {
+      width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none;
+      transition: transform .12s ease, background .2s ease, border-color .2s;
+      background: rgba(255,255,255,.06);
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .btn i { font-size: 16px; }
+
+    .progress { position: relative; height: 8px; background: rgba(255,255,255,.15); border-radius: 999px; cursor: pointer; }
+    .progress__bar { position: absolute; left:0; top:0; height:100%; width:0%; border-radius:999px; background: linear-gradient(90deg, var(--accent), #7be0ff); }
+    .time { display:flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Playlist */
+    .playlist { text-align: left; margin-top: 12px; }
+    .track {
+      display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px;
+      transition: background .2s, border-color .2s, transform .08s;
+      border:2px solid transparent; cursor:pointer;
+    }
+    .track:hover{ background: rgba(255,255,255,.06); }
+    .track.active{ border-color: var(--accent); background: rgba(0, 191, 255, .12); }
+    .track .thumb{ width:40px; height:40px; border-radius:8px; object-fit:cover; flex:0 0 40px; }
+    .track .meta{ display:flex; flex-direction:column; line-height:1.15; }
+    .track .title{ font-size:14px; }
+    .track .artist{ font-size:12px; color: var(--muted); }
+
+    @media (max-width:360px){
+      .btn{ width:38px; height:38px }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <img src="avatar.jpg" alt="avatar">
+    <img class="avatar" src="avatar.jpg" alt="avatar">
     <h2>NghiaMapVlogs</h2>
+
     <div class="icons">
-      <a href="https://facebook.com/1nghiadzno1" target="_blank"><i class="fab fa-facebook"></i></a>
-      <a href="https://zalo.me/0399147796" target="_blank"><i class="fas fa-comment-dots"></i></a>
-      <a href="https://discord.gg/BEJR4qFq" target="_blank"><i class="fab fa-discord"></i></a>
+      <a href="https://facebook.com/1nghiadzno1" target="_blank" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+      <a href="https://zalo.me/0399147796" target="_blank" aria-label="Zalo"><i class="fas fa-comment-dots"></i></a>
+      <a href="https://discord.gg/BEJR4qFq" target="_blank" aria-label="Discord"><i class="fab fa-discord"></i></a>
     </div>
-    <p>👁 36</p>
-    <audio controls>
-      <source src="music.mp3" type="audio/mpeg">
-    </audio>
+
+    <div class="views">👁 36</div>
+
+    <!-- Player -->
+    <div class="player">
+      <div class="nowplaying">Đang phát: <span id="nowTitle">—</span></div>
+      <div class="controls">
+        <button class="btn" id="prevBtn" title="Bài trước"><i class="fa-solid fa-backward"></i></button>
+        <button class="btn" id="playBtn" title="Phát/Tạm dừng"><i class="fa-solid fa-play"></i></button>
+        <button class="btn" id="nextBtn" title="Bài tiếp"><i class="fa-solid fa-forward"></i></button>
+      </div>
+      <div class="progress" id="progress">
+        <div class="progress__bar" id="progressBar"></div>
+      </div>
+      <div class="time"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+    </div>
+
+    <!-- Hidden native audio (we control it with JS) -->
+    <audio id="audio"></audio>
+
+    <!-- Playlist (3 bài) -->
+    <div class="playlist" id="playlist">
+      <div class="track" data-src="music1.mp3" data-title="Phép Màu" data-artist="Nguyễn Hùng">
+        <img class="thumb" src="thumb1.jpg" alt="thumb1">
+        <div class="meta">
+          <span class="title">Phép Màu</span>
+          <span class="artist">Nguyễn Hùng</span>
+        </div>
+      </div>
+      <div class="track" data-src="music2.mp3" data-title="Em Là Không Thể" data-artist="Anh Quân">
+        <img class="thumb" src="thumb2.jpg" alt="thumb2">
+        <div class="meta">
+          <span class="title">Em Là Không Thể</span>
+          <span class="artist">Anh Quân</span>
+        </div>
+      </div>
+      <div class="track" data-src="music3.mp3" data-title="Mất Kết Nối" data-artist="Dương Domic">
+        <img class="thumb" src="thumb3.jpg" alt="thumb3">
+        <div class="meta">
+          <span class="title">Mất Kết Nối</span>
+          <span class="artist">Dương Domic</span>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <script>
+    // ===== Helper =====
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const formatTime = s => {
+      if (!isFinite(s)) return '0:00';
+      const m = Math.floor(s/60);
+      const ss = Math.floor(s%60).toString().padStart(2,'0');
+      return `${m}:${ss}`;
+    };
+
+    // ===== Elements =====
+    const audio = $('#audio');
+    const playBtn = $('#playBtn');
+    const prevBtn = $('#prevBtn');
+    const nextBtn = $('#nextBtn');
+    const nowTitle = $('#nowTitle');
+    const progress = $('#progress');
+    const progressBar = $('#progressBar');
+    const curEl = $('#cur');
+    const durEl = $('#dur');
+    const playlistEl = $('#playlist');
+    const tracks = $$('.track', playlistEl);
+
+    // Build playlist data from DOM
+    const playlist = tracks.map(t => ({
+      src: t.dataset.src,
+      title: t.dataset.title,
+      artist: t.dataset.artist
+    }));
+
+    let index = 0;
+
+    function setActive(i){
+      tracks.forEach((t, k) => t.classList.toggle('active', k === i));
+    }
+
+    function loadSong(i){
+      index = (i + playlist.length) % playlist.length; // wrap-around
+      const {src, title, artist} = playlist[index];
+      audio.src = src;
+      nowTitle.textContent = `${title} — ${artist}`;
+      setActive(index);
+      // Reset progress UI
+      progressBar.style.width = '0%';
+      curEl.textContent = '0:00';
+      durEl.textContent = '0:00';
+    }
+
+    function play(){ audio.play(); playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>'; }
+    function pause(){ audio.pause(); playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+    function toggle(){ audio.paused ? play() : pause(); }
+
+    // Click handlers
+    playBtn.addEventListener('click', toggle);
+    prevBtn.addEventListener('click', () => { loadSong(index-1); play(); });
+    nextBtn.addEventListener('click', () => { loadSong(index+1); play(); });
+
+    // Seek by clicking progress bar
+    progress.addEventListener('click', (e) => {
+      const rect = progress.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      audio.currentTime = ratio * (audio.duration || 0);
+    });
+
+    // Click a track in the list
+    tracks.forEach((t, i) => t.addEventListener('click', () => { loadSong(i); play(); }));
+
+    // Audio events
+    audio.addEventListener('timeupdate', () => {
+      const {currentTime, duration} = audio;
+      progressBar.style.width = `${(currentTime / (duration || 1)) * 100}%`;
+      curEl.textContent = formatTime(currentTime);
+      durEl.textContent = formatTime(duration);
+    });
+
+    audio.addEventListener('ended', () => { // auto next
+      loadSong(index + 1);
+      play();
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      durEl.textContent = formatTime(audio.duration);
+    });
+
+    // Init with first song
+    loadSong(0);
+  </script>
 </body>
 </html>
